@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  full_name     String
+  username      String?   @unique
+  phone         String?
+  password      String?   // Nullable for Google OAuth users
+  google_id     String?   @unique
+  profile_photo String?
+  date_of_birth DateTime?
+  gender        String?
+  user_type     String    @default("member")
+  login_type    String    @default("credential") // "credential" or "google"
+  is_verified   Boolean   @default(false)
+  is_active     Boolean   @default(true)
+  last_login    DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  otps          Otp[]
+  refresh_tokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Otp {
+  id         String   @id @default(uuid())
+  email      String
+  otp_code   String
+  purpose    String   // "email_verification" or "password_reset"
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user_id    String?
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([email, otp_code, purpose])
+  @@map("otps")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  user_id    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
